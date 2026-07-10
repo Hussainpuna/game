@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Word Puzzle</title>
+    <style>
+        :root {
+            --green: #6aaa64;
+            --yellow: #c9b458;
+            --grey: #787c7e;
+            --light-grey: #d3d6da;
+            --dark: #202124;
+            --card: rgba(255,255,255,0.88);
+            --blue: #2563eb;
+            --purple: #7c3aed;
+            --gold: #f59e0b;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            background: radial-gradient(circle at top left, #e0f2fe 0%, transparent 32%),
+                        radial-gradient(circle at top right, #ede9fe 0%, transparent 30%),
+                        linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+            margin: 0;
+            padding: 18px;
+            color: var(--dark);
+        }
+        .game-shell {
+            width: 100%;
+            max-width: 620px;
+            background: var(--card);
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            border-radius: 24px;
+            padding: 22px;
+            box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
+            backdrop-filter: blur(14px);
+        }
+        h1 {
+            margin: 0 0 6px;
+            color: #111827;
+            text-align: center;
+            letter-spacing: 2px;
+            font-size: 34px;
+        }
+        .subtitle {
+            margin: 0 0 18px;
+            color: #64748b;
+            text-align: center;
+            font-size: 14px;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .dash-card {
+            background: linear-gradient(135deg, #111827, #374151);
+            color: white;
+            padding: 12px 10px;
+            border-radius: 14px;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: 0 8px 20px rgba(17,24,39,.18);
+        }
+        .dash-card small { display: block; color: #cbd5e1; font-size: 11px; margin-bottom: 4px; }
+        .dash-card span { color: #fbbf24; font-size: 20px; }
+        .progress-wrap {
+            background: #e5e7eb;
+            height: 14px;
+            border-radius: 99px;
+            overflow: hidden;
+            margin: 8px 0 8px;
+            border: 1px solid #d1d5db;
+        }
+        #progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--blue), var(--purple), var(--gold));
+            border-radius: 99px;
+            transition: width .5s ease;
+        }
+        #level-text {
+            text-align: center;
+            font-size: 13px;
+            color: #475569;
+            margin-bottom: 16px;
+            font-weight: bold;
+        }
+        .instructions-box {
+            background-color: #ffffff;
+            border: 1px solid var(--light-grey);
+            border-radius: 16px;
+            padding: 14px;
+            margin-bottom: 16px;
+            box-shadow: 0 5px 18px rgba(15,23,42,0.06);
+        }
+        .instructions-box h3 { margin-top: 0; margin-bottom: 8px; color: #111827; }
+        .instructions-box p { font-size: 13px; color: #555; margin: 5px 0; line-height: 1.4; }
+        .badge { display: inline-block; padding: 2px 7px; font-weight: bold; color: white; border-radius: 5px; font-size: 11px; }
+        .hint-container { margin: 10px 0 14px; display: flex; gap: 10px; flex-direction: column; align-items: center; }
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .hint-btn, .control-btn, .share-btn {
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            font-size: 13px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+            box-shadow: 0 8px 18px rgba(0,0,0,.12);
+        }
+        .hint-btn { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+        .control-btn { background: linear-gradient(135deg, #16a34a, #15803d); }
+        .share-btn { background: linear-gradient(135deg, #7c3aed, #5b21b6); }
+        button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(0,0,0,.16); }
+        button:disabled { background: #cbd5e1; cursor: not-allowed; box-shadow: none; opacity: .75; }
+        #theme-text { color: #dc2626; min-height: 22px; font-weight: bold; text-align: center; }
+        #message { min-height: 28px; text-align: center; font-weight: bold; color: #111827; }
+        #grid { display: grid; grid-template-rows: repeat(6, 1fr); grid-gap: 6px; margin: 12px auto 18px; width: max-content; }
+        .row { display: grid; grid-template-columns: repeat(5, 1fr); grid-gap: 6px; }
+        .tile {
+            width: 54px;
+            height: 54px;
+            border: 2px solid var(--light-grey);
+            background: #fff;
+            border-radius: 10px;
+            font-size: 25px;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-transform: uppercase;
+            transition: border-color .15s ease, background .25s ease, transform .15s ease;
+            box-shadow: 0 4px 10px rgba(15, 23, 42, .06);
+        }
+        .tile.filled { border-color: #64748b; animation: pop .12s ease-in-out; }
+        .tile.reveal { animation: flip .5s ease; }
+        .tile.shake { animation: shake .35s ease; }
+        .tile.win { animation: bounce .5s ease; }
+        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.12); } 100% { transform: scale(1); } }
+        @keyframes flip { 0% { transform: rotateX(0); } 50% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
+        @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-3px); } }
+        @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        #keyboard { display: flex; flex-direction: column; gap: 7px; align-items: center; }
+        .kb-row { display: flex; gap: 5px; }
+        .key {
+            min-width: 35px;
+            height: 46px;
+            border-radius: 9px;
+            background-color: var(--light-grey);
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform .12s ease, background .2s ease;
+        }
+        .key:active { transform: scale(.94); }
+        .key.wide { min-width: 58px; font-size: 12px; }
+        .key.action-delete {
+            background: linear-gradient(135deg, #ef4444, #b91c1c);
+            color: white;
+            box-shadow: 0 8px 18px rgba(239, 68, 68, 0.28);
+        }
+        .key.action-enter {
+            background: linear-gradient(135deg, #22c55e, #15803d);
+            color: white;
+            box-shadow: 0 8px 18px rgba(34, 197, 94, 0.28);
+        }
+        .correct { background-color: var(--green) !important; color: white; border-color: var(--green); }
+        .present { background-color: var(--yellow) !important; color: white; border-color: var(--yellow); }
+        .absent { background-color: var(--grey) !important; color: white; border-color: var(--grey); }
+        @media (max-width: 520px) {
+            body { padding: 10px; }
+            .game-shell { padding: 16px 10px; border-radius: 18px; }
+            .dashboard { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+            .dash-card { padding: 10px 5px; }
+            .tile { width: 48px; height: 48px; font-size: 23px; }
+            .key { min-width: 30px; height: 43px; font-size: 12px; }
+            .key.wide { min-width: 48px; }
+            .actions { gap: 6px; }
+            .hint-btn, .control-btn, .share-btn { padding: 9px 10px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <main class="game-shell">
+        <h1>WORD PUZZLE</h1>
+        <p class="subtitle">Guess the word, build your score, and keep the rounds moving.</p>
+        <div class="dashboard">
+            <div class="dash-card"><small>Round</small><span id="round-display">1</span></div>
+            <div class="dash-card"><small>Total Score</small><span id="score-display">0</span></div>
+            <div class="dash-card"><small>Best Score</small><span id="best-score-display">0</span></div>
+        </div>
+        <div class="progress-wrap"><div id="progress-fill"></div></div>
+        <div id="level-text">Level: Beginner | 0 / 100 pts</div>
+        <div class="instructions-box">
+            <h3>Rules & Scoring</h3>
+            <p>Guess the hidden 5-letter word in 6 tries. Use Enter to submit.</p>
+            <p><span class="badge correct">Green</span> right letter, right spot. <span class="badge present">Yellow</span> right letter, wrong spot. <span class="badge absent">Grey</span> not in the word.</p>
+            <p><strong>Win:</strong> +50 pts. Green hint: -10 pts. Theme clue: -20 pts. Loss or skip: penalty applies.</p>
+        </div>
+        <div class="hint-container">
+            <div class="actions">
+                <button id="btn-green-hint" class="hint-btn" onclick="useGreenTileHint()">Reveal Green Letter (-10)</button>
+                <button id="btn-theme-hint" class="hint-btn" onclick="useThemeHint()">Get Theme Clue (-20)</button>
+                <button class="control-btn" onclick="handlePlayAgainClick()">Skip Round</button>
+                <button class="share-btn" onclick="shareResult()">Share</button>
+            </div>
+            <div id="theme-text"></div>
+            <div id="message"></div>
+        </div>
+        <div id="grid"></div>
+        <div id="keyboard"></div>
+    </main>
+<script>
+    const GAME_DATA = [
+        { word: 'ABOUT', clue: 'Topic, Summary, Detail' },
+        { word: 'ABOVE', clue: 'Ceiling, Sky, Overhead' },
+        { word: 'ACTOR', clue: 'Movie, Stage, Camera' },
+        { word: 'ACUTE', clue: 'Sharp, Angle, Strong' },
+        { word: 'ADAPT', clue: 'Adjust, Change, Fit' },
+        { word: 'ADDED', clue: 'Extra, More, Plus' },
+        { word: 'ADMIN', clue: 'Office, Manage, System' },
+        { word: 'ADMIT', clue: 'Entrance, Ticket, Confess' },
+        { word: 'ADOPT', clue: 'Child, Pet, Accept' },
+        { word: 'ADULT', clue: 'Mature, Citizen, Grown' },
+        { word: 'AFFIX', clue: 'Attach, Stick, Join' },
+        { word: 'AFTER', clue: 'Future, Sequence, Next' },
+        { word: 'AGAIN', clue: 'Repeat, Replay, Loop' },
+        { word: 'AGENT', clue: 'Spy, Broker, Secret' },
+        { word: 'AGING', clue: 'Older, Time, Years' },
+        { word: 'AGREE', clue: 'Nod, Match, Harmony' },
+        { word: 'AHEAD', clue: 'Front, Forward, Future' },
+        { word: 'AIMED', clue: 'Target, Goal, Point' },
+        { word: 'AISLE', clue: 'Flight, Grocery, Wedding' },
+        { word: 'ALARM', clue: 'Siren, Morning, Wake' },
+        { word: 'ALBUM', clue: 'Music, Photo, Vinyl' },
+        { word: 'ALERT', clue: 'Warning, Notice, Signal' },
+        { word: 'ALIVE', clue: 'Breathing, Heartbeat, Active' },
+        { word: 'ALLEY', clue: 'Bowling, Lane, Narrow' },
+        { word: 'ALLOW', clue: 'Permit, Grant, Access' },
+        { word: 'ALONE', clue: 'Deserted, Solo, Island' },
+        { word: 'ALONG', clue: 'Beside, Parallel, Route' },
+        { word: 'ALTER', clue: 'Tailor, Change, Modify' },
+        { word: 'AMBER', clue: 'Gold, Resin, Warm' },
+        { word: 'AMONG', clue: 'Between, Group, Crowd' },
+        { word: 'AMPLE', clue: 'Enough, Plenty, Space' },
+        { word: 'ANGEL', clue: 'Wings, Halo, Heaven' },
+        { word: 'ANGER', clue: 'Rage, Heat, Emotion' },
+        { word: 'ANGLE', clue: 'Math, Corner, Degree' },
+        { word: 'ANGRY', clue: 'Fuming, Red, Mad' },
+        { word: 'ANKLE', clue: 'Foot, Joint, Shoe' },
+        { word: 'APART', clue: 'Separate, Pieces, Broken' },
+        { word: 'APPLE', clue: 'Fruit, Pie, Laptop' },
+        { word: 'APPLY', clue: 'Job, Resume, Paint' },
+        { word: 'APRON', clue: 'Kitchen, Chef, Cloth' },
+        { word: 'AREAS', clue: 'Common, Everyday, Familiar' },
+        { word: 'ARENA', clue: 'Stadium, Concert, Sports' },
+        { word: 'ARGUE', clue: 'Debate, Fight, Words' },
+        { word: 'ARISE', clue: 'Stand, Wake, Happen' },
+        { word: 'ARMOR', clue: 'Shield, Knight, Protection' },
+        { word: 'ARROW', clue: 'Bow, Target, Vector' },
+        { word: 'ASIDE', clue: 'Whisper, Marginal, Stage' },
+        { word: 'ASSET', clue: 'Value, Property, Wealth' },
+        { word: 'ATLAS', clue: 'Map, World, Book' },
+        { word: 'AUDIO', clue: 'Sound, Speaker, Music' },
+        { word: 'AVOID', clue: 'Escape, Prevent, Stay Away' },
+        { word: 'AWAKE', clue: 'Morning, Coffee, Eyes' },
+        { word: 'AWARD', clue: 'Prize, Trophy, Winner' },
+        { word: 'AWFUL', clue: 'Terrible, Bad, Quality' },
+        { word: 'BADGE', clue: 'Police, Uniform, Pin' },
+        { word: 'BADLY', clue: 'Common, Everyday, Familiar' },
+        { word: 'BAKER', clue: 'Oven, Bread, Pastry' },
+        { word: 'BANDS', clue: 'Common, Everyday, Familiar' },
+        { word: 'BANKS', clue: 'Money, River, Account' },
+        { word: 'BASIC', clue: 'Simple, Foundation, Primary' },
+        { word: 'BASIS', clue: 'Ground, Root, Core' },
+        { word: 'BATCH', clue: 'Group, Cooking, Set' },
+        { word: 'BATHE', clue: 'Common, Everyday, Familiar' },
+        { word: 'BEACH', clue: 'Sand, Waves, Umbrella' },
+        { word: 'BEANS', clue: 'Coffee, Food, Green' },
+        { word: 'BEARD', clue: 'Face, Hair, Shave' },
+        { word: 'BEAST', clue: 'Animal, Wild, Monster' },
+        { word: 'BEATS', clue: 'Common, Everyday, Familiar' },
+        { word: 'BEGIN', clue: 'Start, Launch, Green' },
+        { word: 'BEING', clue: 'Living, Creature, Human' },
+        { word: 'BELOW', clue: 'Under, Ground, Floor' },
+        { word: 'BENCH', clue: 'Park, Court, Wood' },
+        { word: 'BERRY', clue: 'Fruit, Sweet, Jam' },
+        { word: 'BILLS', clue: 'Money, Payment, Paper' },
+        { word: 'BIRDS', clue: 'Wings, Sky, Nest' },
+        { word: 'BIRTH', clue: 'Baby, Hospital, Cradle' },
+        { word: 'BLACK', clue: 'Shadow, Night, Charcoal' },
+        { word: 'BLADE', clue: 'Knife, Grass, Razor' },
+        { word: 'BLAME', clue: 'Fault, Finger, Accuse' },
+        { word: 'BLANK', clue: 'Canvas, Document, Void' },
+        { word: 'BLAST', clue: 'Explosion, Rocket, Wave' },
+        { word: 'BLEND', clue: 'Mix, Smoothie, Colors' },
+        { word: 'BLIND', clue: 'Window, Shadow, Dark' },
+        { word: 'BLINK', clue: 'Eye, Laser, Camera' },
+        { word: 'BLISS', clue: 'Happy, Peace, Joy' },
+        { word: 'BLOCK', clue: 'Toy, Cube, Street' },
+        { word: 'BLOOD', clue: 'Red, Heart, Vein' },
+        { word: 'BLOOM', clue: 'Spring, Flower, Rose' },
+        { word: 'BOARD', clue: 'Wood, Surf, Director' },
+        { word: 'BOAST', clue: 'Brag, Proud, Ego' },
+        { word: 'BOATS', clue: 'Water, River, Sail' },
+        { word: 'BONDS', clue: 'Common, Everyday, Familiar' },
+        { word: 'BONUS', clue: 'Extra, Salary, Gift' },
+        { word: 'BOOKS', clue: 'Reading, Pages, Library' },
+        { word: 'BOOST', clue: 'Turbo, Power, Energy' },
+        { word: 'BOOTH', clue: 'Seat, Table, Corner' },
+        { word: 'BOUND', clue: 'Jump, Border, Limit' },
+        { word: 'BOXES', clue: 'Common, Everyday, Familiar' },
+        { word: 'BRAIN', clue: 'Head, Mind, Smart' },
+        { word: 'BRAKE', clue: 'Car, Stop, Pedal' },
+        { word: 'BRAND', clue: 'Logo, Business, Identity' },
+        { word: 'BRASS', clue: 'Instrument, Jazz, Metal' },
+        { word: 'BRAVE', clue: 'Hero, Courage, Lion' },
+        { word: 'BREAD', clue: 'Bakery, Toast, Sandwich' },
+        { word: 'BREAK', clue: 'Glass, Pause, Fracture' },
+        { word: 'BRICK', clue: 'Wall, Building, Red' },
+        { word: 'BRIDE', clue: 'Dress, Wedding, Ring' },
+        { word: 'BRIEF', clue: 'Case, Summary, Short' },
+        { word: 'BRING', clue: 'Carry, Fetch, Deliver' },
+        { word: 'BRISK', clue: 'Morning, Wind, Walk' },
+        { word: 'BROAD', clue: 'Wide, Daylight, Scale' },
+        { word: 'BROOM', clue: 'Clean, Floor, Sweep' },
+        { word: 'BROWN', clue: 'Chocolate, Mud, Wood' },
+        { word: 'BRUSH', clue: 'Teeth, Hair, Paint' },
+        { word: 'BUDDY', clue: 'Friend, Mate, Partner' },
+        { word: 'BUILD', clue: 'Blocks, Construction, Make' },
+        { word: 'BUNCH', clue: 'Grapes, Flowers, Group' },
+        { word: 'BURNS', clue: 'Common, Everyday, Familiar' },
+        { word: 'BURST', clue: 'Bubble, Balloon, Pop' },
+        { word: 'BUYER', clue: 'Store, Customer, Cash' },
+        { word: 'CABIN', clue: 'Woods, Log, Pilot' },
+        { word: 'CABLE', clue: 'Wire, TV, Internet' },
+        { word: 'CAGES', clue: 'Common, Everyday, Familiar' },
+        { word: 'CAKES', clue: 'Sweet, Birthday, Bakery' },
+        { word: 'CAMEL', clue: 'Desert, Hump, Sand' },
+        { word: 'CANAL', clue: 'Water, Boat, Route' },
+        { word: 'CANDY', clue: 'Sweet, Sugar, Chocolate' },
+        { word: 'CARDS', clue: 'Game, Bank, Paper' },
+        { word: 'CARES', clue: 'Common, Everyday, Familiar' },
+        { word: 'CARGO', clue: 'Truck, Ship, Load' },
+        { word: 'CARRY', clue: 'Bag, Weight, Lift' },
+        { word: 'CARVE', clue: 'Wood, Pumpkin, Turkey' },
+        { word: 'CATCH', clue: 'Baseball, Fishing, Trap' },
+        { word: 'CATER', clue: 'Common, Everyday, Familiar' },
+        { word: 'CAUSE', clue: 'Effect, Origin, Reason' },
+        { word: 'CELLS', clue: 'Common, Everyday, Familiar' },
+        { word: 'CENTS', clue: 'Common, Everyday, Familiar' },
+        { word: 'CHAIN', clue: 'Link, Metal, Bike' },
+        { word: 'CHAIR', clue: 'Furniture, Sit, Office' },
+        { word: 'CHALK', clue: 'Board, Teacher, White' },
+        { word: 'CHAMP', clue: 'Medal, Trophy, Winner' },
+        { word: 'CHAOS', clue: 'Mess, Noise, Confusion' },
+        { word: 'CHARM', clue: 'Lucky, Magic, Bracelet' },
+        { word: 'CHART', clue: 'Data, Graph, Map' },
+        { word: 'CHASE', clue: 'Dog, Police, Hunt' },
+        { word: 'CHEAP', clue: 'Cost, Deal, Low' },
+        { word: 'CHEAT', clue: 'Exam, Game, Card' },
+        { word: 'CHECK', clue: 'Mark, Menu, Pattern' },
+        { word: 'CHEEK', clue: 'Face, Smile, Blush' },
+        { word: 'CHEER', clue: 'Crowd, Happy, Shout' },
+        { word: 'CHESS', clue: 'Board, King, Strategy' },
+        { word: 'CHEST', clue: 'Box, Heart, Body' },
+        { word: 'CHIEF', clue: 'Leader, Native, Command' },
+        { word: 'CHILD', clue: 'Kid, Toy, School' },
+        { word: 'CHILL', clue: 'Ice, Winter, Wind' },
+        { word: 'CHINA', clue: 'Plate, Asia, Porcelain' },
+        { word: 'CHIPS', clue: 'Potato, Casino, Snack' },
+        { word: 'CHOIR', clue: 'Singing, Church, Voice' },
+        { word: 'CIVIC', clue: 'Common, Everyday, Familiar' },
+        { word: 'CLAIM', clue: 'Insurance, Baggage, Right' },
+        { word: 'CLASS', clue: 'School, Student, Grade' },
+        { word: 'CLEAN', clue: 'Soap, Water, Polish' },
+        { word: 'CLEAR', clue: 'Glass, Sky, Obvious' },
+        { word: 'CLERK', clue: 'Store, Desk, Paper' },
+        { word: 'CLICK', clue: 'Mouse, Remote, Sound' },
+        { word: 'CLIFF', clue: 'Edge, Rock, Mountain' },
+        { word: 'CLIMB', clue: 'Mountain, Ladder, Tree' },
+        { word: 'CLOCK', clue: 'Time, Hour, Tick' },
+        { word: 'CLOSE', clue: 'Door, Nearby, Lock' },
+        { word: 'CLOTH', clue: 'Fabric, Shirt, Tailor' },
+        { word: 'CLOUD', clue: 'Sky, Rain, White' },
+        { word: 'CLOWN', clue: 'Circus, Makeup, Funny' },
+        { word: 'COACH', clue: 'Team, Sports, Train' },
+        { word: 'COAST', clue: 'Beach, Ocean, Border' },
+        { word: 'COCOA', clue: 'Hot, Chocolate, Mug' },
+        { word: 'COINS', clue: 'Common, Everyday, Familiar' },
+        { word: 'COLOR', clue: 'Paint, Bright, Shade' },
+        { word: 'COMBO', clue: 'Common, Everyday, Familiar' },
+        { word: 'COMIC', clue: 'Book, Hero, Funny' },
+        { word: 'COUCH', clue: 'Sofa, Living, Relax' },
+        { word: 'COUNT', clue: 'Numbers, Math, Score' },
+        { word: 'CRAFT', clue: 'Make, Skill, Handmade' },
+        { word: 'CRANE', clue: 'Bird, Building, Lift' },
+        { word: 'CREAM', clue: 'Milk, Cake, Smooth' },
+        { word: 'CROWD', clue: 'People, Event, Group' },
+        { word: 'CROWN', clue: 'King, Queen, Gold' },
+        { word: 'DAILY', clue: 'Everyday, Routine, News' },
+        { word: 'DAIRY', clue: 'Milk, Cheese, Farm' },
+        { word: 'DANCE', clue: 'Music, Party, Rhythm' },
+        { word: 'DEALS', clue: 'Common, Everyday, Familiar' },
+        { word: 'DELAY', clue: 'Late, Wait, Time' },
+        { word: 'DEPTH', clue: 'Deep, Measure, Water' },
+        { word: 'DIARY', clue: 'Notes, Secret, Daily' },
+        { word: 'DINER', clue: 'Food, Table, Meal' },
+        { word: 'DIRTY', clue: 'Dust, Mess, Clean' },
+        { word: 'DOORS', clue: 'Entry, Open, House' },
+        { word: 'DOUBT', clue: 'Unsure, Question, Maybe' },
+        { word: 'DOZEN', clue: 'Twelve, Eggs, Count' },
+        { word: 'DREAM', clue: 'Sleep, Goal, Night' },
+        { word: 'DRESS', clue: 'Clothes, Fashion, Party' },
+        { word: 'DRINK', clue: 'Water, Glass, Thirsty' },
+        { word: 'DRIVE', clue: 'Car, Road, Travel' },
+        { word: 'DRONE', clue: 'Flying, Camera, Remote' },
+        { word: 'EARLY', clue: 'Morning, Before, First' },
+        { word: 'EARTH', clue: 'Planet, Soil, Globe' },
+        { word: 'EIGHT', clue: 'Number, Count, After Seven' },
+        { word: 'ELBOW', clue: 'Arm, Joint, Bend' },
+        { word: 'ELDER', clue: 'Older, Senior, Wise' },
+        { word: 'EMAIL', clue: 'Inbox, Message, Online' },
+        { word: 'EMPTY', clue: 'Blank, Void, Nothing' },
+        { word: 'ENEMY', clue: 'Fight, Opponent, Rival' },
+        { word: 'ENJOY', clue: 'Like, Fun, Happy' },
+        { word: 'ENTRY', clue: 'Door, Access, Start' },
+        { word: 'EQUAL', clue: 'Same, Math, Balance' },
+        { word: 'EVENT', clue: 'Party, Meeting, Show' },
+        { word: 'EVERY', clue: 'All, Each, Always' },
+        { word: 'EXTRA', clue: 'More, Bonus, Additional' },
+        { word: 'FACTS', clue: 'Truth, Info, Proof' },
+        { word: 'FAITH', clue: 'Trust, Belief, Hope' },
+        { word: 'FANCY', clue: 'Premium, Style, Luxury' },
+        { word: 'FARMS', clue: 'Fields, Animals, Crops' },
+        { word: 'FAULT', clue: 'Mistake, Blame, Error' },
+        { word: 'FAVOR', clue: 'Help, Kindness, Support' },
+        { word: 'FENCE', clue: 'Border, Garden, Wood' },
+        { word: 'FEVER', clue: 'Hot, Sick, Doctor' },
+        { word: 'FIELD', clue: 'Grass, Sports, Farm' },
+        { word: 'FIFTH', clue: 'Number, Place, Order' },
+        { word: 'FIGHT', clue: 'Boxing, Angry, Battle' },
+        { word: 'FINAL', clue: 'Last, End, Result' },
+        { word: 'FIRST', clue: 'Start, Number One, Winner' },
+        { word: 'FIXED', clue: 'Repair, Stable, Done' },
+        { word: 'FLAME', clue: 'Fire, Candle, Heat' },
+        { word: 'FLASH', clue: 'Light, Camera, Fast' },
+        { word: 'FLEET', clue: 'Ships, Cars, Group' },
+        { word: 'FLOOR', clue: 'Ground, Room, Walk' },
+        { word: 'FLOUR', clue: 'Baking, Bread, Powder' },
+        { word: 'FOCUS', clue: 'Attention, Camera, Clear' },
+        { word: 'FORCE', clue: 'Power, Push, Strength' },
+        { word: 'FRESH', clue: 'New, Clean, Green' },
+        { word: 'FRONT', clue: 'Ahead, Face, Entrance' },
+        { word: 'FRUIT', clue: 'Apple, Mango, Sweet' },
+        { word: 'FUNNY', clue: 'Laugh, Joke, Smile' },
+        { word: 'GAMES', clue: 'Play, Fun, Score' },
+        { word: 'GIANT', clue: 'Huge, Tall, Big' },
+        { word: 'GIFTS', clue: 'Present, Birthday, Box' },
+        { word: 'GLASS', clue: 'Window, Mirror, Drink' },
+        { word: 'GLOBE', clue: 'World, Earth, Round' },
+        { word: 'GLOVE', clue: 'Hand, Winter, Sport' },
+        { word: 'GOALS', clue: 'Target, Football, Dream' },
+        { word: 'GRACE', clue: 'Elegant, Kind, Smooth' },
+        { word: 'GRADE', clue: 'School, Level, Score' },
+        { word: 'GRAIN', clue: 'Rice, Wheat, Small' },
+        { word: 'GRAPE', clue: 'Fruit, Purple, Vine' },
+        { word: 'GRASS', clue: 'Green, Lawn, Yard' },
+        { word: 'GREAT', clue: 'Excellent, Big, Strong' },
+        { word: 'GREEN', clue: 'Grass, Nature, Go' },
+        { word: 'GROUP', clue: 'Team, People, Set' },
+        { word: 'GUARD', clue: 'Protect, Security, Watch' },
+        { word: 'GUEST', clue: 'Visitor, Hotel, Welcome' },
+        { word: 'GUIDE', clue: 'Help, Map, Leader' },
+        { word: 'HABIT', clue: 'Routine, Repeat, Daily' },
+        { word: 'HAPPY', clue: 'Smile, Joy, Good' },
+        { word: 'HEART', clue: 'Love, Beat, Red' },
+        { word: 'HEAVY', clue: 'Weight, Hard, Lift' },
+        { word: 'HONEY', clue: 'Sweet, Bee, Jar' },
+        { word: 'HORSE', clue: 'Ride, Stable, Animal' },
+        { word: 'HOTEL', clue: 'Room, Travel, Guest' },
+        { word: 'HOUSE', clue: 'Home, Roof, Family' },
+        { word: 'IMAGE', clue: 'Photo, Picture, Visual' },
+        { word: 'INDEX', clue: 'List, Finger, Guide' },
+        { word: 'INNER', clue: 'Inside, Deep, Hidden' },
+        { word: 'INPUT', clue: 'Type, Data, Enter' },
+        { word: 'ISSUE', clue: 'Problem, Topic, Matter' },
+        { word: 'JELLY', clue: 'Sweet, Soft, Jam' },
+        { word: 'JUDGE', clue: 'Court, Decision, Law' },
+        { word: 'JUICE', clue: 'Orange, Fruit, Bottle' },
+        { word: 'KNIFE', clue: 'Cut, Kitchen, Sharp' },
+        { word: 'LABEL', clue: 'Tag, Name, Sticker' },
+        { word: 'LARGE', clue: 'Big, Size, Wide' },
+        { word: 'LASER', clue: 'Light, Beam, Focus' },
+        { word: 'LATER', clue: 'After, Future, Soon' },
+        { word: 'LAYER', clue: 'Level, Cake, Stack' },
+        { word: 'LEADS', clue: 'Sales, Contact, Prospects' },
+        { word: 'LEARN', clue: 'Study, School, Skill' },
+        { word: 'LEMON', clue: 'Yellow, Sour, Fruit' },
+        { word: 'LEVEL', clue: 'Stage, Game, Equal' },
+        { word: 'LIGHT', clue: 'Bulb, Sun, Lamp' },
+        { word: 'LINES', clue: 'Queue, Drawing, Text' },
+        { word: 'LOCAL', clue: 'Nearby, Area, City' },
+        { word: 'LOGIC', clue: 'Reason, Mind, Puzzle' },
+        { word: 'LOOSE', clue: 'Not Tight, Free, Open' },
+        { word: 'LUCKY', clue: 'Chance, Fortune, Winner' },
+        { word: 'LUNCH', clue: 'Food, Noon, Meal' },
+        { word: 'MAGIC', clue: 'Trick, Wand, Wonder' },
+        { word: 'MAJOR', clue: 'Big, Important, Main' },
+        { word: 'MAKER', clue: 'Creator, Builder, Brand' },
+        { word: 'MANGO', clue: 'Fruit, Sweet, Yellow' },
+        { word: 'MARCH', clue: 'Month, Walk, Parade' },
+        { word: 'MATCH', clue: 'Game, Pair, Fire' },
+        { word: 'MAYBE', clue: 'Possible, Unsure, Perhaps' },
+        { word: 'MEDIA', clue: 'News, Social, Content' },
+        { word: 'METAL', clue: 'Steel, Hard, Shine' },
+        { word: 'METER', clue: 'Measure, Distance, Unit' },
+        { word: 'MINOR', clue: 'Small, Young, Less' },
+        { word: 'MODEL', clue: 'Car, Fashion, Sample' },
+        { word: 'MONEY', clue: 'Cash, Wallet, Bank' },
+        { word: 'MONTH', clue: 'Calendar, Time, 30 Days' },
+        { word: 'MOTOR', clue: 'Engine, Car, Machine' },
+        { word: 'MOVIE', clue: 'Cinema, Actor, Screen' },
+        { word: 'MUSIC', clue: 'Guitar, Song, Radio' },
+        { word: 'NEEDS', clue: 'Want, Must, Requirement' },
+        { word: 'NERVE', clue: 'Brave, Body, Feeling' },
+        { word: 'NEVER', clue: 'Not Once, No, Future' },
+        { word: 'NIGHT', clue: 'Moon, Stars, Dark' },
+        { word: 'NORTH', clue: 'Map, Direction, Top' },
+        { word: 'NOVEL', clue: 'Book, Story, Reading' },
+        { word: 'NURSE', clue: 'Hospital, Care, Patient' },
+        { word: 'OCEAN', clue: 'Blue, Sea, Fish' },
+        { word: 'OFFER', clue: 'Deal, Discount, Proposal' },
+        { word: 'OLIVE', clue: 'Oil, Green, Food' },
+        { word: 'ORDER', clue: 'Buy, Sequence, Request' },
+        { word: 'OTHER', clue: 'Different, Another, Else' },
+        { word: 'OUTER', clue: 'Outside, Layer, Space' },
+        { word: 'OWNER', clue: 'Boss, Holder, Property' },
+        { word: 'PAINT', clue: 'Color, Wall, Brush' },
+        { word: 'PANEL', clue: 'Board, Control, Group' },
+        { word: 'PAPER', clue: 'Write, Sheet, Office' },
+        { word: 'PARTY', clue: 'Music, Friends, Dance' },
+        { word: 'PEACE', clue: 'Calm, No War, Quiet' },
+        { word: 'PEACH', clue: 'Fruit, Pink, Sweet' },
+        { word: 'PEARL', clue: 'Shell, White, Jewelry' },
+        { word: 'PHONE', clue: 'Call, Screen, Mobile' },
+        { word: 'PHOTO', clue: 'Camera, Image, Memory' },
+        { word: 'PIANO', clue: 'Keys, Music, Concert' },
+        { word: 'PIECE', clue: 'Part, Puzzle, Slice' },
+        { word: 'PILOT', clue: 'Plane, Fly, Sky' },
+        { word: 'PIZZA', clue: 'Cheese, Slice, Food' },
+        { word: 'PLACE', clue: 'Location, Area, Spot' },
+        { word: 'PLANE', clue: 'Flight, Sky, Travel' },
+        { word: 'PLANT', clue: 'Green, Garden, Grow' },
+        { word: 'PLATE', clue: 'Food, Dish, Table' },
+        { word: 'POINT', clue: 'Score, Dot, Direction' },
+        { word: 'POWER', clue: 'Energy, Strength, Electric' },
+        { word: 'PRESS', clue: 'Push, News, Button' },
+        { word: 'PRICE', clue: 'Cost, Value, Money' },
+        { word: 'PRIDE', clue: 'Proud, Honor, Lion' },
+        { word: 'PRINT', clue: 'Paper, Ink, Copy' },
+        { word: 'PRIZE', clue: 'Award, Winner, Gift' },
+        { word: 'PROOF', clue: 'Evidence, Truth, Confirm' },
+        { word: 'QUEEN', clue: 'Crown, Royal, Chess' },
+        { word: 'QUICK', clue: 'Fast, Speed, Rapid' },
+        { word: 'QUIET', clue: 'Silent, Calm, Peace' },
+        { word: 'RADIO', clue: 'Music, Voice, Station' },
+        { word: 'READY', clue: 'Prepared, Set, Go' },
+        { word: 'RELAX', clue: 'Calm, Rest, Chill' },
+        { word: 'REPLY', clue: 'Answer, Message, Respond' },
+        { word: 'RIGHT', clue: 'Correct, Direction, Good' },
+        { word: 'RIVER', clue: 'Water, Stream, Flow' },
+        { word: 'ROAST', clue: 'Coffee, Meat, Heat' },
+        { word: 'ROBOT', clue: 'Machine, Metal, AI' },
+        { word: 'ROOMS', clue: 'House, Hotel, Space' },
+        { word: 'ROUGH', clue: 'Hard, Not Smooth, Tough' },
+        { word: 'ROUND', clue: 'Circle, Game, Level' },
+        { word: 'ROUTE', clue: 'Road, Map, Path' },
+        { word: 'ROYAL', clue: 'King, Queen, Luxury' },
+        { word: 'SALAD', clue: 'Green, Fresh, Food' },
+        { word: 'SAUCE', clue: 'Dip, Pasta, Flavor' },
+        { word: 'SCALE', clue: 'Weight, Size, Measure' },
+        { word: 'SCENE', clue: 'Movie, View, Moment' },
+        { word: 'SCORE', clue: 'Points, Game, Result' },
+        { word: 'SCOUT', clue: 'Search, Explore, Team' },
+        { word: 'SENSE', clue: 'Feel, Smell, Logic' },
+        { word: 'SERVE', clue: 'Help, Food, Tennis' },
+        { word: 'SEVEN', clue: 'Number, Lucky, Count' },
+        { word: 'SHADE', clue: 'Shadow, Color, Cool' },
+        { word: 'SHAPE', clue: 'Circle, Square, Form' },
+        { word: 'SHARE', clue: 'Send, Split, Social' },
+        { word: 'SHEET', clue: 'Bed, Paper, Cover' },
+        { word: 'SHELF', clue: 'Books, Storage, Wall' },
+        { word: 'SHELL', clue: 'Sea, Turtle, Cover' },
+        { word: 'SHIFT', clue: 'Move, Work, Change' },
+        { word: 'SHINE', clue: 'Bright, Polish, Glow' },
+        { word: 'SHIRT', clue: 'Clothes, Cotton, Wear' },
+        { word: 'SHOES', clue: 'Foot, Walk, Pair' },
+        { word: 'SHORT', clue: 'Small, Brief, Quick' },
+        { word: 'SKILL', clue: 'Talent, Practice, Ability' },
+        { word: 'SLEEP', clue: 'Night, Bed, Rest' },
+        { word: 'SLICE', clue: 'Pizza, Cut, Piece' },
+        { word: 'SMART', clue: 'Clever, Phone, Brain' },
+        { word: 'SMILE', clue: 'Happy, Face, Teeth' },
+        { word: 'SMOKE', clue: 'Fire, Grey, Air' },
+        { word: 'SNAKE', clue: 'Reptile, Jungle, Hiss' },
+        { word: 'SOLID', clue: 'Hard, Strong, Stable' },
+        { word: 'SOUND', clue: 'Audio, Noise, Music' },
+        { word: 'SOUTH', clue: 'Map, Direction, Down' },
+        { word: 'SPACE', clue: 'Room, Sky, Gap' },
+        { word: 'SPEED', clue: 'Fast, Car, Race' },
+        { word: 'SPICE', clue: 'Flavor, Food, Hot' },
+        { word: 'SPORT', clue: 'Game, Team, Fitness' },
+        { word: 'STAFF', clue: 'Team, Office, Workers' },
+        { word: 'STAGE', clue: 'Show, Theater, Level' },
+        { word: 'STAND', clue: 'Rise, Booth, Support' },
+        { word: 'START', clue: 'Begin, Go, Launch' },
+        { word: 'STEAM', clue: 'Hot, Water, Cloud' },
+        { word: 'STEEL', clue: 'Metal, Strong, Grey' },
+        { word: 'STOCK', clue: 'Inventory, Market, Goods' },
+        { word: 'STONE', clue: 'Rock, Pebbles, Hard' },
+        { word: 'STORE', clue: 'Shop, Buy, Shelves' },
+        { word: 'STORM', clue: 'Rain, Thunder, Cloud' },
+        { word: 'STYLE', clue: 'Fashion, Design, Look' },
+        { word: 'SUGAR', clue: 'Sweet, White, Tea' },
+        { word: 'SUNNY', clue: 'Bright, Day, Weather' },
+        { word: 'TABLE', clue: 'Desk, Food, Rows' },
+        { word: 'TASTE', clue: 'Flavor, Tongue, Food' },
+        { word: 'TEACH', clue: 'School, Learn, Class' },
+        { word: 'TEAMS', clue: 'Group, Players, Work' },
+        { word: 'THANK', clue: 'Grateful, Appreciate, Kind' },
+        { word: 'THEME', clue: 'Clue, Topic, Style' },
+        { word: 'THERE', clue: 'Place, Away, Location' },
+        { word: 'THINK', clue: 'Mind, Idea, Brain' },
+        { word: 'THREE', clue: 'Number, Count, Trio' },
+        { word: 'THROW', clue: 'Ball, Toss, Hand' },
+        { word: 'TIGER', clue: 'Stripes, Jungle, Cat' },
+        { word: 'TIMER', clue: 'Clock, Countdown, Alarm' },
+        { word: 'TITLE', clue: 'Name, Heading, Book' },
+        { word: 'TODAY', clue: 'Now, Date, Present' },
+        { word: 'TOOLS', clue: 'Fix, Build, Work' },
+        { word: 'TOUCH', clue: 'Feel, Hand, Contact' },
+        { word: 'TOWER', clue: 'Tall, Building, Signal' },
+        { word: 'TRADE', clue: 'Business, Exchange, Market' },
+        { word: 'TRAIN', clue: 'Tracks, Station, Journey' },
+        { word: 'TREAT', clue: 'Gift, Sweet, Reward' },
+        { word: 'TREND', clue: 'Popular, Style, Social' },
+        { word: 'TRIAL', clue: 'Test, Court, Try' },
+        { word: 'TRUCK', clue: 'Cargo, Driver, Wheel' },
+        { word: 'TRUST', clue: 'Believe, Faith, Safe' },
+        { word: 'TRUTH', clue: 'Fact, Honest, Real' },
+        { word: 'VALUE', clue: 'Worth, Price, Benefit' },
+        { word: 'VIDEO', clue: 'Camera, Reel, Screen' },
+        { word: 'VISIT', clue: 'Guest, Travel, See' },
+        { word: 'VOICE', clue: 'Sound, Speak, Singer' },
+        { word: 'WASTE', clue: 'Trash, Loss, Unused' },
+        { word: 'WATCH', clue: 'Time, Wrist, Look' },
+        { word: 'WATER', clue: 'Ocean, Bottle, Rain' },
+        { word: 'WHEEL', clue: 'Car, Round, Move' },
+        { word: 'WHERE', clue: 'Place, Location, Question' },
+        { word: 'WHITE', clue: 'Snow, Clean, Color' },
+        { word: 'WHOLE', clue: 'Full, Complete, Total' },
+        { word: 'WOMAN', clue: 'Lady, Adult, Female' },
+        { word: 'WORLD', clue: 'Earth, Globe, People' },
+        { word: 'WRITE', clue: 'Pen, Text, Paper' },
+        { word: 'WRONG', clue: 'Mistake, False, Bad' },
+        { word: 'YOUNG', clue: 'Child, New, Early' }
+    ];
+
+    let SECRET_WORD = "";
+    let CURRENT_CLUE = "";
+    let totalScore = 0;
+    let roundCount = 1;
+    let greenHintUsedInRound = false;
+    let themeHintUsedInRound = false;
+    let roundIsActive = false;
+    let lastResultText = "I started playing Word Puzzle!";
+    let usedWords = [];
+    let bestScore = 0;
+
+    const STORAGE_KEYS = {
+        totalScore: "wordPuzzle_totalScore",
+        roundCount: "wordPuzzle_roundCount",
+        bestScore: "wordPuzzle_bestScore",
+        usedWords: "wordPuzzle_usedWords",
+        lastResultText: "wordPuzzle_lastResultText"
+    };
+
+    const MAX_GUESSES = 6;
+    const WORD_LENGTH = 5;
+    const AUTO_NEXT_DELAY = 1800;
+    const LEVELS = [
+        { name: "Beginner", min: 0, next: 100 },
+        { name: "Smart Player", min: 100, next: 300 },
+        { name: "Word Master", min: 300, next: 600 },
+        { name: "Puzzle King", min: 600, next: 1000 },
+        { name: "Legend", min: 1000, next: 1500 }
+    ];
+
+    let currentRow = 0;
+    let currentCol = 0;
+    let guesses = [];
+
+    const kbRows = [
+        ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+        ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
+        ["DEL", "Z", "X", "C", "V", "B", "N", "M", "ENTER"]
+    ];
+
+    function loadGameProgress() {
+        totalScore = Number(localStorage.getItem(STORAGE_KEYS.totalScore)) || 0;
+        roundCount = Number(localStorage.getItem(STORAGE_KEYS.roundCount)) || 1;
+        bestScore = Number(localStorage.getItem(STORAGE_KEYS.bestScore)) || 0;
+        lastResultText = localStorage.getItem(STORAGE_KEYS.lastResultText) || lastResultText;
+
+        try {
+            const savedUsedWords = JSON.parse(localStorage.getItem(STORAGE_KEYS.usedWords));
+            usedWords = Array.isArray(savedUsedWords) ? savedUsedWords : [];
+        } catch (error) {
+            usedWords = [];
+        }
+    }
+
+    function saveGameProgress() {
+        if (totalScore > bestScore) bestScore = totalScore;
+
+        localStorage.setItem(STORAGE_KEYS.totalScore, String(totalScore));
+        localStorage.setItem(STORAGE_KEYS.roundCount, String(roundCount));
+        localStorage.setItem(STORAGE_KEYS.bestScore, String(bestScore));
+        localStorage.setItem(STORAGE_KEYS.usedWords, JSON.stringify(usedWords));
+        localStorage.setItem(STORAGE_KEYS.lastResultText, lastResultText);
+
+        updateSavedDisplays();
+    }
+
+    function updateSavedDisplays() {
+        document.getElementById("round-display").textContent = roundCount;
+        document.getElementById("score-display").textContent = totalScore;
+        document.getElementById("best-score-display").textContent = bestScore;
+    }
+
+    window.onload = () => {
+        loadGameProgress();
+        buildKeyboard();
+        startNewRound(false);
+    };
+
+    function playTone(type) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const gain = ctx.createGain();
+        gain.gain.value = 0.06;
+        gain.connect(ctx.destination);
+        const notes = {
+            type: [380],
+            hint: [520, 660],
+            win: [523, 659, 784],
+            lose: [260, 190],
+            share: [650, 850]
+        }[type] || [400];
+        notes.forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            osc.type = "sine";
+            osc.frequency.value = freq;
+            osc.connect(gain);
+            const start = ctx.currentTime + i * 0.09;
+            osc.start(start);
+            osc.stop(start + 0.08);
+        });
+        setTimeout(() => ctx.close(), 600);
+    }
+
+    function pickNewWord() {
+        if (usedWords.length >= GAME_DATA.length) usedWords = [];
+        let item;
+        do {
+            item = GAME_DATA[Math.floor(Math.random() * GAME_DATA.length)];
+        } while (usedWords.includes(item.word) && usedWords.length < GAME_DATA.length);
+        usedWords.push(item.word);
+        return item;
+    }
+
+    function startNewRound(wasSkippedMidGame) {
+        if (wasSkippedMidGame && roundIsActive) {
+            let roundPenalty = calculatePenalty();
+            totalScore -= roundPenalty;
+            saveGameProgress();
+            showMessage(`Skipped! -${roundPenalty} pts. New round started.`, "warn");
+        }
+
+        const selected = pickNewWord();
+        SECRET_WORD = selected.word;
+        CURRENT_CLUE = selected.clue;
+
+        currentRow = 0;
+        currentCol = 0;
+        greenHintUsedInRound = false;
+        themeHintUsedInRound = false;
+        roundIsActive = true;
+        guesses = Array(MAX_GUESSES).fill("").map(() => Array(WORD_LENGTH).fill(""));
+
+        updateSavedDisplays();
+        saveGameProgress();
+        document.getElementById("theme-text").textContent = "";
+        document.getElementById("btn-green-hint").disabled = false;
+        document.getElementById("btn-theme-hint").disabled = false;
+        updateProgressBar();
+
+        const grid = document.getElementById("grid");
+        grid.innerHTML = "";
+        for (let i = 0; i < MAX_GUESSES; i++) {
+            const row = document.createElement("div");
+            row.className = "row";
+            for (let j = 0; j < WORD_LENGTH; j++) {
+                const tile = document.createElement("div");
+                tile.className = "tile";
+                tile.id = `tile-${i}-${j}`;
+                row.appendChild(tile);
+            }
+            grid.appendChild(row);
+        }
+
+        document.querySelectorAll('.key').forEach(k => {
+            k.className = k.textContent === "ENTER" || k.textContent === "DEL" ? "key wide" : "key";
+            if (k.textContent === "ENTER") k.classList.add("action-enter");
+            if (k.textContent === "DEL") k.classList.add("action-delete");
+        });
+    }
+
+    function handlePlayAgainClick() {
+        if (!roundIsActive) return;
+        roundCount++;
+        startNewRound(true);
+    }
+
+    function buildKeyboard() {
+        const keyboard = document.getElementById("keyboard");
+        keyboard.innerHTML = "";
+        kbRows.forEach(rowPattern => {
+            const rowDiv = document.createElement("div");
+            rowDiv.className = "kb-row";
+            rowPattern.forEach(key => {
+                const btn = document.createElement("button");
+                btn.textContent = key;
+                btn.className = "key";
+                if (key === "ENTER" || key === "DEL") btn.classList.add("wide");
+                if (key === "ENTER") btn.classList.add("action-enter");
+                if (key === "DEL") btn.classList.add("action-delete");
+                btn.id = `key-${key}`;
+                btn.addEventListener("click", () => handleInput(key));
+                rowDiv.appendChild(btn);
+            });
+            keyboard.appendChild(rowDiv);
+        });
+    }
+
+    window.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") handleInput("ENTER");
+        else if (e.key === "Backspace") handleInput("DEL");
+        else if (/^[a-zA-Z]$/.test(e.key)) handleInput(e.key.toUpperCase());
+    });
+
+    function handleInput(key) {
+        if (!roundIsActive || currentRow >= MAX_GUESSES) return;
+        playTone("type");
+
+        if (key === "DEL") {
+            if (currentCol > 0) {
+                currentCol--;
+                guesses[currentRow][currentCol] = "";
+                updateGrid();
+            }
+        } else if (key === "ENTER") {
+            if (currentCol === WORD_LENGTH) {
+                checkRow();
+            } else {
+                shakeCurrentRow();
+                showMessage("Complete the 5-letter word first.", "warn");
+            }
+        } else if (currentCol < WORD_LENGTH) {
+            guesses[currentRow][currentCol] = key;
+            currentCol++;
+            updateGrid(true);
+        }
+    }
+
+    function updateGrid(animateLast) {
+        for (let j = 0; j < WORD_LENGTH; j++) {
+            const tile = document.getElementById(`tile-${currentRow}-${j}`);
+            if (!tile) continue;
+            tile.textContent = guesses[currentRow][j];
+            tile.classList.toggle("filled", guesses[currentRow][j] !== "");
+        }
+        if (animateLast && currentCol > 0) {
+            const tile = document.getElementById(`tile-${currentRow}-${currentCol - 1}`);
+            tile.classList.remove("filled");
+            void tile.offsetWidth;
+            tile.classList.add("filled");
+        }
+    }
+
+    function checkRow() {
+        const currentGuess = guesses[currentRow].join("");
+        let wordCopy = SECRET_WORD;
+        const rowIndex = currentRow;
+
+        for (let j = 0; j < WORD_LENGTH; j++) {
+            const tile = document.getElementById(`tile-${rowIndex}-${j}`);
+            const letter = currentGuess[j];
+            setTimeout(() => tile.classList.add("reveal"), j * 120);
+            if (letter === SECRET_WORD[j]) {
+                setTimeout(() => { tile.classList.add("correct"); colorKeyboard(letter, "correct"); }, j * 120 + 180);
+                wordCopy = wordCopy.replace(letter, "_");
+            }
+        }
+
+        for (let j = 0; j < WORD_LENGTH; j++) {
+            const tile = document.getElementById(`tile-${rowIndex}-${j}`);
+            const letter = currentGuess[j];
+            if (letter !== SECRET_WORD[j]) {
+                if (wordCopy.includes(letter)) {
+                    setTimeout(() => { tile.classList.add("present"); colorKeyboard(letter, "present"); }, j * 120 + 180);
+                    wordCopy = wordCopy.replace(letter, "_");
+                } else {
+                    setTimeout(() => { tile.classList.add("absent"); colorKeyboard(letter, "absent"); }, j * 120 + 180);
+                }
+            }
+        }
+
+        setTimeout(() => finishCheck(currentGuess, rowIndex), 900);
+    }
+
+    function finishCheck(currentGuess, rowIndex) {
+        if (currentGuess === SECRET_WORD) {
+            let pointsWon = 50;
+            if (greenHintUsedInRound) pointsWon -= 10;
+            if (themeHintUsedInRound) pointsWon -= 20;
+            totalScore += pointsWon;
+            saveGameProgress();
+            updateProgressBar();
+            playTone("win");
+            animateWinRow(rowIndex);
+            lastResultText = `I solved Round ${roundCount} of Word Puzzle! Word: ${SECRET_WORD} | Score: ${totalScore}`;
+            saveGameProgress();
+            showMessage(`Correct! +${pointsWon} pts. Next round starting...`, "success");
+            roundIsActive = false;
+            setTimeout(() => { roundCount++; startNewRound(false); showMessage("New round started!", "success"); }, AUTO_NEXT_DELAY);
+            return;
+        }
+
+        currentRow++;
+        currentCol = 0;
+
+        if (currentRow === MAX_GUESSES) {
+            let lossDeduction = calculatePenalty();
+            totalScore -= lossDeduction;
+            saveGameProgress();
+            updateProgressBar();
+            playTone("lose");
+            lastResultText = `I reached Round ${roundCount} in Word Puzzle. The word was ${SECRET_WORD}. Score: ${totalScore}`;
+            saveGameProgress();
+            showMessage(`Game Over! Word was ${SECRET_WORD}. -${lossDeduction} pts. Next round starting...`, "error");
+            roundIsActive = false;
+            setTimeout(() => { roundCount++; startNewRound(false); showMessage("New round started!", "success"); }, AUTO_NEXT_DELAY + 500);
+        }
+    }
+
+    function calculatePenalty() {
+        let penalty = 0;
+        if (greenHintUsedInRound) penalty += 10;
+        if (themeHintUsedInRound) penalty += 20;
+        return penalty === 0 ? 10 : penalty;
+    }
+
+    function colorKeyboard(letter, statusClass) {
+        const keyBtn = document.getElementById(`key-${letter}`);
+        if (!keyBtn || keyBtn.classList.contains("correct")) return;
+        if (keyBtn.classList.contains("present") && statusClass === "absent") return;
+        keyBtn.className = `key ${statusClass}`;
+    }
+
+    function useGreenTileHint() {
+        if (!roundIsActive) return;
+        playTone("hint");
+        greenHintUsedInRound = true;
+        let randomSlot = Math.floor(Math.random() * WORD_LENGTH);
+        let discoveredLetter = SECRET_WORD[randomSlot];
+        showMessage(`Green Hint: Slot ${randomSlot + 1} is "${discoveredLetter}" (-10 pts)`, "hint");
+        document.getElementById("btn-green-hint").disabled = true;
+    }
+
+    function useThemeHint() {
+        if (!roundIsActive) return;
+        playTone("hint");
+        themeHintUsedInRound = true;
+        document.getElementById("theme-text").textContent = `Theme Clue: ${CURRENT_CLUE}`;
+        document.getElementById("btn-theme-hint").disabled = true;
+    }
+
+    function shareResult() {
+        const text = `${lastResultText}
+Can you beat my score?`;
+        if (navigator.share) {
+            navigator.share({ title: "Word Puzzle", text }).catch(() => {});
+        } else if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => showMessage("Result copied. Share it anywhere!", "success"));
+        } else {
+            prompt("Copy your result:", text);
+        }
+        playTone("share");
+    }
+
+    function updateProgressBar() {
+        const safeScore = Math.max(0, totalScore);
+        let current = LEVELS[0];
+        for (const level of LEVELS) {
+            if (safeScore >= level.min) current = level;
+        }
+        const progress = Math.min(100, Math.max(0, ((safeScore - current.min) / (current.next - current.min)) * 100));
+        document.getElementById("progress-fill").style.width = `${progress}%`;
+        document.getElementById("level-text").textContent = `Level: ${current.name} | ${safeScore} / ${current.next} pts`;
+    }
+
+    function showMessage(text, type) {
+        const el = document.getElementById("message");
+        el.textContent = text;
+        const colors = { success: "#15803d", error: "#dc2626", warn: "#b45309", hint: "#1d4ed8" };
+        el.style.color = colors[type] || "#111827";
+    }
+
+    function shakeCurrentRow() {
+        for (let j = 0; j < WORD_LENGTH; j++) {
+            const tile = document.getElementById(`tile-${currentRow}-${j}`);
+            tile.classList.add("shake");
+            setTimeout(() => tile.classList.remove("shake"), 400);
+        }
+    }
+
+    function animateWinRow(rowIndex) {
+        for (let j = 0; j < WORD_LENGTH; j++) {
+            const tile = document.getElementById(`tile-${rowIndex}-${j}`);
+            setTimeout(() => tile.classList.add("win"), j * 100);
+            setTimeout(() => tile.classList.remove("win"), 900);
+        }
+    }
+</script>
+</body>
+</html>
